@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import AISettingsPanel from '../components/ai/AISettingsPanel';
+import { aiSettings, AISettings as AISettingsType } from '../lib/ai/aiSettings';
 
 // Simple toggle switch component
 const Toggle = ({ 
@@ -262,6 +264,21 @@ export default function Settings() {
         </Card>
 
         {/* About Section */}
+        {/* AI Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>AI Features</CardTitle>
+            <CardDescription>Configure AI-powered writing assistance</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AISettingsPanel 
+              isOpen={true} 
+              onClose={() => {}} // Always visible in settings page
+            />
+          </CardContent>
+        </Card>
+
+        {/* About Section */}
         <Card>
           <CardHeader>
             <CardTitle>About</CardTitle>
@@ -269,7 +286,7 @@ export default function Settings() {
           <CardContent>
             <div className="text-sm text-muted-foreground">
               <p>MarkFlow v1.0.0</p>
-              <p className="mt-1">A modern, collaborative markdown editor.</p>
+              <p className="mt-1">A modern, collaborative markdown editor with AI assistance.</p>
               <div className="mt-4">
                 <p>Built with:</p>
                 <ul className="list-disc ml-5 mt-1 space-y-1">
@@ -277,6 +294,7 @@ export default function Settings() {
                   <li>TypeScript</li>
                   <li>Automerge</li>
                   <li>Tailwind CSS</li>
+                  <li>Claude AI</li>
                 </ul>
               </div>
             </div>

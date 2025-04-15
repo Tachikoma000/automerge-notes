@@ -16,6 +16,7 @@ import {
   deleteDocument,
   getAllFolders
 } from '../lib/documentService';
+import { indexingService } from '../lib/ai/indexingService';
 
 export default function Editor() {
   const { docId } = useParams();
@@ -375,6 +376,7 @@ function CollaborativeEditor({ docUrl, userId }: { docUrl: string; userId: strin
           collaborators={remoteStates}
           userId={userId}
           getUserColor={getUserColor}
+          documentId={docUrl}
         />
       </div>
       

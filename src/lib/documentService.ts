@@ -1,5 +1,7 @@
 import repo, { NoteDoc, FolderDoc } from '../repo';
 import { AutomergeUrl } from '@automerge/automerge-repo';
+import { aiSettings } from './ai/aiSettings';
+import { indexingService } from './ai/indexingService';
 
 // Local storage keys
 const STORAGE_KEYS = {
@@ -34,6 +36,13 @@ export async function createDocument(title: string = 'Untitled Document', folder
   
   const docUrl = handle.url;
   addDocumentToStorage(docUrl);
+  
+  // Index document if indexing is enabled and set to onSave
+  const settings = aiSettings.getSettings();
+  if (settings.indexing.enabled && settings.indexing.frequency === 'onSave') {
+    indexingService.indexDocument(docUrl);
+  }
+  
   return docUrl;
 }
 
@@ -89,6 +98,14 @@ export function updateDocument(docUrl: string, updates: Partial<NoteDoc>): void 
     // Always update the updatedAt timestamp
     doc.updatedAt = Date.now();
   });
+  
+  // Index document if content changed and indexing is enabled and set to onSave
+  if (updates.text !== undefined) {
+    const settings = aiSettings.getSettings();
+    if (settings.indexing.enabled && settings.indexing.frequency === 'onSave') {
+      indexingService.indexDocument(docUrl);
+    }
+  }
 }
 
 export async function deleteDocument(docUrl: string): Promise<boolean> {
