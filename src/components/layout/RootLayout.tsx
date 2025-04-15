@@ -1,8 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../ui/button';
 
 export default function RootLayout() {
+  // Check if in demo mode
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Detect demo mode from URL parameters
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    setIsDemoMode(searchParams.get('demo') === 'true');
+  }, [location]);
+
+  // Function to exit demo mode
+  const exitDemoMode = () => {
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.delete('demo');
+    
+    // Create the new URL without the demo parameter
+    const newSearch = searchParams.toString();
+    const newPath = location.pathname + (newSearch ? `?${newSearch}` : '');
+    
+    // Navigate to the same page without the demo parameter
+    navigate(newPath);
+  };
+
   // Theme state
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     // Check for user preference in localStorage or system preference
@@ -30,6 +54,30 @@ export default function RootLayout() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {isDemoMode && (
+        <div className="bg-yellow-100 dark:bg-yellow-900 border-b border-yellow-200 dark:border-yellow-800 py-2 px-4">
+          <div className="container max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-yellow-600 dark:text-yellow-400">
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                You are currently in Demo Mode. Changes will not be saved permanently.
+              </span>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={exitDemoMode}
+              className="ml-4 bg-white dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700 hover:bg-yellow-50 dark:hover:bg-yellow-700"
+            >
+              Exit Demo Mode
+            </Button>
+          </div>
+        </div>
+      )}
       <header className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/50">
         <div className="container flex h-14 max-w-7xl items-center">
           <div className="mr-4 flex">
@@ -41,7 +89,7 @@ export default function RootLayout() {
                 <path d="M8 17h8"/>
                 <path d="M8 9h2"/>
               </svg>
-              <span className="font-bold hidden sm:inline-block">MarkFlow</span>
+              <span className="font-bold hidden sm:inline-block">Arcane Studio</span>
             </Link>
           </div>
           
@@ -121,7 +169,7 @@ export default function RootLayout() {
       
       <footer className="border-t py-4 text-center text-sm text-muted-foreground">
         <div className="container">
-          <p>© {new Date().getFullYear()} MarkFlow. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Arcane Studio. All rights reserved.</p>
         </div>
       </footer>
     </div>

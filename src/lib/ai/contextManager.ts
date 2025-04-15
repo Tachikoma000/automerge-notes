@@ -42,6 +42,12 @@ export const contextManager = {
       relevance: 1.0
     }];
     
+    // Analyze current document structure for better context
+    let documentAnalysis = '';
+    if (currentDocument.text && currentDocument.text.length > 0) {
+      documentAnalysis = this.analyzeDocumentStructure(currentDocument.text);
+    }
+    
     // Add explicitly referenced documents
     if (referencedDocumentIds.length > 0) {
       for (const docId of referencedDocumentIds) {
@@ -117,28 +123,54 @@ export const contextManager = {
     };
   },
   
-  // Build system context string
+  // Build system context string with enhanced document understanding
   buildSystemContext(documents: DocumentContext[], maxTokens: number): string {
     // Sort by relevance
     const sortedDocs = [...documents].sort((a, b) => 
       (b.relevance || 0) - (a.relevance || 0)
     );
     
-    let context = 'You are an AI writing assistant helping with the following documents:\n\n';
+    // Get primary document (the one being edited)
+    const primaryDoc = sortedDocs[0];
+    const relatedDocs = sortedDocs.slice(1);
     
-    // Add documents until we approach token limit
-    // This is a simplification - in reality, would need proper token estimation
-    for (const doc of sortedDocs) {
-      const docContext = `DOCUMENT: ${doc.title}\nCONTENT:\n${doc.content}\n\n`;
+    // Analyze the document
+    const documentAnalysis = this.analyzeDocumentStructure(primaryDoc.content);
+    
+    // Start with primary document context - but don't include full content
+    let context = `You are an AI writing assistant helping with a document titled "${primaryDoc.title}".
+
+${documentAnalysis}
+
+IMPORTANT: When responding to the user:
+1. Do NOT repeat large sections of the document content in your responses
+2. Refer to specific parts of the document when relevant, but be concise
+3. Use brief quotes (1-2 sentences) when necessary to highlight specific points
+4. Focus on providing helpful analysis and suggestions rather than repeating content
+
+`;
+    
+    // Add related documents if available (only titles, not content)
+    if (relatedDocs.length > 0) {
+      context += `\nRELATED DOCUMENTS:`;
       
-      // Crude token estimation (approx 4 chars per token)
-      if ((context.length + docContext.length) / 4 > maxTokens * 0.8) {
-        // If adding full document would exceed limit, add summary instead
-        context += `DOCUMENT: ${doc.title}\nSUMMARY: This is a related document that may be relevant.\n\n`;
-      } else {
-        context += docContext;
+      // Just list the related document titles
+      for (const doc of relatedDocs) {
+        context += `\n- ${doc.title}`;
       }
     }
+    
+    // Add context about having the document for reference
+    context += `\n\nYou have access to the document content for analysis, but do not need to display it back to the user. They already have the document open and can see it.
+    
+As a writing assistant, your role is to:
+1. Help improve the document's content, structure, and clarity
+2. Answer questions specifically about this document
+3. Provide suggestions tailored to the document's purpose and current state
+4. Refer to specific parts of the document when giving feedback
+5. Avoid generic advice - be document-specific and actionable
+
+YOU MUST KEEP YOUR RESPONSES FOCUSED AND CONCISE. Avoid long explanations and never repeat large portions of the original document text in your responses.`;
     
     return context;
   },
@@ -152,5 +184,145 @@ export const contextManager = {
     
     // Remove the @ symbol
     return mentions.map(mention => mention.substring(1));
+  },
+  
+  // Analyze document structure for better context
+  analyzeDocumentStructure(text: string): string {
+    if (!text || text.trim().length === 0) {
+      return 'DOCUMENT ANALYSIS: This document is empty.';
+    }
+    
+    // Count paragraphs
+    const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+    
+    // Look for headings (markdown style)
+    const headingPattern = /^(#{1,6})\s+(.+)$/gm;
+    const headings: {level: number, text: string}[] = [];
+    let match;
+    
+    while ((match = headingPattern.exec(text)) !== null) {
+      headings.push({
+        level: match[1].length,
+        text: match[2].trim()
+      });
+    }
+    
+    // Check for code blocks
+    const codeBlocks = (text.match(/```[\s\S]*?```/g) || []).length;
+    
+    // Check for lists
+    const bulletLists = (text.match(/^[ \t]*[-*+][ \t]+/gm) || []).length;
+    const numberedLists = (text.match(/^[ \t]*\d+\.[ \t]+/gm) || []).length;
+    
+    // Check for links and images
+    const links = (text.match(/\[.+?\]\(.+?\)/g) || []).length;
+    const images = (text.match(/!\[.+?\]\(.+?\)/g) || []).length;
+    
+    // Approximate word count
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+    
+    // Build analysis
+    let analysis = 'DOCUMENT ANALYSIS:\n';
+    
+    // Document size info
+    analysis += `- Word count: Approximately ${wordCount} words\n`;
+    analysis += `- Structure: ${paragraphs.length} paragraphs\n`;
+    
+    // Document organization
+    if (headings.length > 0) {
+      analysis += `- Contains ${headings.length} headings/sections\n`;
+      
+      // List major sections (only level 1-2 headings)
+      const majorHeadings = headings.filter(h => h.level <= 2);
+      if (majorHeadings.length > 0) {
+        analysis += `- Major sections: ${majorHeadings.map(h => `"${h.text}"`).join(', ')}\n`;
+      }
+    }
+    
+    // Document elements
+    const elements = [];
+    if (codeBlocks > 0) elements.push(`${codeBlocks} code block(s)`);
+    if (bulletLists > 0) elements.push(`bullet lists`);
+    if (numberedLists > 0) elements.push(`numbered lists`);
+    if (links > 0) elements.push(`${links} link(s)`);
+    if (images > 0) elements.push(`${images} image(s)`);
+    
+    if (elements.length > 0) {
+      analysis += `- Special elements: ${elements.join(', ')}\n`;
+    }
+    
+    // Document type inference
+    analysis += `- Document type: ${this.inferDocumentType(text, {
+      headings, 
+      paragraphs: paragraphs.length,
+      lists: bulletLists + numberedLists,
+      code: codeBlocks
+    })}\n`;
+    
+    return analysis;
+  },
+  
+  // Get a meaningful excerpt from document content
+  getDocumentExcerpt(text: string, maxLength: number = 300): string {
+    if (!text || text.length === 0) return '';
+    
+    // If text is short enough, return it all
+    if (text.length <= maxLength) return text;
+    
+    // Try to get the first paragraph if it's a reasonable length
+    const paragraphs = text.split(/\n\s*\n/);
+    if (paragraphs[0] && paragraphs[0].length <= maxLength * 0.8) {
+      return paragraphs[0] + (paragraphs.length > 1 ? '...' : '');
+    }
+    
+    // Otherwise, get the first maxLength characters
+    return text.substring(0, maxLength) + '...';
+  },
+  
+  // Infer document type based on content patterns
+  inferDocumentType(text: string, stats: {
+    headings: {level: number, text: string}[],
+    paragraphs: number,
+    lists: number,
+    code: number
+  }): string {
+    const { headings, paragraphs, lists, code } = stats;
+    
+    // Check for code-heavy documents
+    if (code > 3 || code > paragraphs * 0.5) {
+      return "Technical document or code documentation";
+    }
+    
+    // Check for heading structure pattern
+    if (headings.length > 5 && headings.length > paragraphs * 0.3) {
+      return "Structured reference document or guide";
+    }
+    
+    // Check for list-heavy content
+    if (lists > 5 && lists > paragraphs * 0.5) {
+      return "List-based document (notes, outline, or checklist)";
+    }
+    
+    // Check for specific heading patterns
+    const headingTexts = headings.map(h => h.text.toLowerCase());
+    
+    if (headingTexts.some(h => h.includes('introduction') || h.includes('overview')) &&
+        headingTexts.some(h => h.includes('conclusion') || h.includes('summary'))) {
+      return "Formal article or report";
+    }
+    
+    if (headingTexts.some(h => h.includes('abstract')) &&
+        headingTexts.some(h => h.includes('references') || h.includes('bibliography'))) {
+      return "Academic paper";
+    }
+    
+    // Default types based on length
+    if (paragraphs > 10) {
+      return "Long-form document or article";
+    } else if (paragraphs >= 3) {
+      return "Short document or note";
+    } else {
+      return "Brief note or draft";
+    }
   }
 };

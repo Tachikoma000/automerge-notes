@@ -33,16 +33,24 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
-  // Add initial greeting
+  // Add initial greeting with document context
   useEffect(() => {
     if (messages.length === 0) {
+      // Get document word count instead of showing content
+      const wordCount = document.text ? document.text.trim().split(/\s+/).length : 0;
+      const title = document.title || 'Untitled';
+
       setMessages([{
         role: 'assistant',
-        content: `Hi! I'm your AI writing assistant. I can help with brainstorming, editing, research, and more. How can I help with your document "${document.title || 'Untitled'}"?`,
+        content: `Hi! I'm your AI writing assistant. I'm looking at your document **"${title}"**.
+        
+${document.text && document.text.length > 0 
+  ? `This document has approximately ${wordCount} words. What would you like help with today?` 
+  : `This document is currently empty. Would you like help with starting your writing?`}`,
         timestamp: Date.now()
       }]);
     }
-  }, [document.title, messages.length]);
+  }, [document.title, document.text, messages.length]);
   
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -118,22 +126,30 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
   if (!isOpen) return null;
   
   return (
-    <Card className="fixed right-4 bottom-4 w-80 h-[500px] shadow-lg z-50 flex flex-col">
+    <Card className="h-full flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-lg">AI Assistant</CardTitle>
+          <div>
+            <CardTitle className="text-lg">Document Assistant</CardTitle>
+            <div className="text-xs text-muted-foreground mt-1 truncate max-w-[200px]">
+              {document.title || 'Untitled'} • {document.text ? `${document.text.length} chars` : 'Empty'}
+            </div>
+          </div>
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={onClose}
             className="h-8 w-8 p-0"
           >
-            ✕
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </Button>
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 overflow-y-auto pb-0">
+      <CardContent className="overflow-y-auto pb-0 flex-1">
         <div className="flex flex-col gap-3">
           {messages.map((message, i) => (
             <div 
@@ -147,7 +163,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     : 'bg-muted'
                 }`}
               >
-                <div className="prose-sm dark:prose-invert max-w-none">
+                <div className="prose-sm dark:prose-invert max-w-none break-words whitespace-normal overflow-hidden">
                   <ReactMarkdown>{message.content}</ReactMarkdown>
                 </div>
               </div>
@@ -186,23 +202,63 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
       </CardContent>
       
       <div className="p-3 mt-3 border-t">
-        <div className="flex gap-2">
-          <Input
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyPress}
-            placeholder="Ask a question..."
-            className="flex-1"
-            disabled={isLoading}
-          />
-          <Button 
-            onClick={handleSendMessage} 
-            size="sm"
-            disabled={!input.trim() || isLoading}
-          >
-            Send
-          </Button>
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <Input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder="Ask about your document..."
+              className="flex-1"
+              disabled={isLoading}
+            />
+            <Button 
+              onClick={handleSendMessage} 
+              size="sm"
+              disabled={!input.trim() || isLoading}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+              Send
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-1 justify-center">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-6 px-2"
+              onClick={() => setInput("Summarize this document for me")}
+            >
+              Summarize
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-6 px-2"
+              onClick={() => setInput("Suggest improvements to this writing")}
+            >
+              Improve
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-6 px-2"
+              onClick={() => setInput("Check grammar and spelling")}
+            >
+              Grammar
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-6 px-2"
+              onClick={() => setInput("Help me brainstorm ideas for this topic")}
+            >
+              Brainstorm
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

@@ -303,7 +303,7 @@ export async function setUpDemoContent(): Promise<void> {
   const personalFolderId = await createFolder('Personal Notes');
   
   // Create a few sample documents
-  await createDocument('Getting Started with MarkFlow', undefined);
+  await createDocument('Getting Started with Arcane Studio', undefined);
   await createDocument('Project Ideas', workFolderId);
   await createDocument('Meeting Notes', workFolderId);
   await createDocument('Personal Journal', personalFolderId);

@@ -43,6 +43,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const [referencedDocs, setReferencedDocs] = useState<string[]>([]);
   const [cursorPosition, setCursorPosition] = useState(0);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [isCompletionLoading, setIsCompletionLoading] = useState(false);
   const [settings, setSettings] = useState(aiSettings.getSettings());
   const [showSuggestions, setShowSuggestions] = useState(true);
   
@@ -68,6 +69,17 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     setText(newValue);
     onChange(newValue);
     updateCursorPosition();
+  };
+
+  // Handle keyboard events for special functions like accepting suggestions with Tab
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Accept suggestion with Tab key
+    if (e.key === 'Tab' && aiSuggestion) {
+      e.preventDefault(); // Prevent default tab behavior
+      applyAiSuggestion();
+    }
+    
+    // We could add more keyboard shortcuts here in the future
   };
 
   // Update cursor position
@@ -109,13 +121,40 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const applyAiSuggestion = () => {
     if (!aiSuggestion) return;
     
-    const textBeforeCursor = text.substring(0, cursorPosition - 3); // Remove +++
+    // If triggered by +++ marker, remove it
+    const removeMarker = text.substring(0, cursorPosition).endsWith('+++');
+    const textBeforeCursor = removeMarker 
+      ? text.substring(0, cursorPosition - 3) 
+      : text.substring(0, cursorPosition);
     const textAfterCursor = text.substring(cursorPosition);
     
     const newText = textBeforeCursor + aiSuggestion + textAfterCursor;
     setText(newText);
     onChange(newText);
     setAiSuggestion(null);
+  };
+  
+  // Request AI completion at cursor position 
+  const requestCompletion = async () => {
+    if (!settings.features.autoComplete) return;
+    
+    // Set loading state
+    setIsCompletionLoading(true);
+    
+    // Get context around the cursor
+    const textBeforeCursor = text.substring(0, cursorPosition);
+    const textAfterCursor = text.substring(cursorPosition);
+    
+    // Use the text up to the cursor for completion
+    try {
+      setAiSuggestion(null); // Clear any existing suggestion first
+      const completion = await assistantService.generateCompletion(textBeforeCursor);
+      setAiSuggestion(completion);
+    } catch (error) {
+      console.error('Error requesting AI completion:', error);
+    } finally {
+      setIsCompletionLoading(false);
+    }
   };
   
   // Handle @ mentions
@@ -357,24 +396,110 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
           
           {/* AI assistant button */}
           <Button 
-            variant="ghost" 
+            variant={showAIChat ? "default" : "ghost"}
             size="sm" 
-            onClick={() => setShowAIChat(!showAIChat)}
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-            title="AI Assistant"
+            onClick={() => {
+              const newState = !showAIChat;
+              setShowAIChat(newState);
+              if (newState) {
+                // Turn off suggestions when enabling chat
+                setShowSuggestions(false);
+              }
+            }}
+            className={`h-8 w-8 p-0 relative ${showAIChat ? 'text-primary-foreground bg-primary' : 'text-muted-foreground hover:text-foreground'}`}
+            title={showAIChat ? "Hide AI Assistant" : "Show AI Assistant"}
           >
-            🤖
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M12 8V4H8" />
+              <rect x="2" y="2" width="20" height="20" rx="5" />
+              <path d="M14 8h-4v4h4" />
+              <path d="M8 16h8" />
+            </svg>
+            {showAIChat && (
+              <span className="absolute top-0 right-0 block w-2 h-2 bg-green-500 rounded-full"></span>
+            )}
           </Button>
           
           {/* Toggle suggestions button */}
           <Button 
-            variant="ghost" 
+            variant={showSuggestions ? "default" : "ghost"}
             size="sm" 
-            onClick={() => setShowSuggestions(!showSuggestions)}
-            className={`h-8 w-8 p-0 ${showSuggestions ? 'text-primary' : 'text-muted-foreground'} hover:text-foreground`}
-            title={showSuggestions ? "Hide Suggestions" : "Show Suggestions"}
+            onClick={() => {
+              const newState = !showSuggestions;
+              setShowSuggestions(newState);
+              if (newState) {
+                // Turn off AI chat when enabling suggestions
+                setShowAIChat(false);
+              }
+            }}
+            className={`h-8 w-8 p-0 relative ${showSuggestions ? 'text-primary-foreground bg-primary' : 'text-muted-foreground hover:text-foreground'}`}
+            title={showSuggestions ? "Hide Writing Suggestions" : "Show Writing Suggestions"}
           >
-            💡
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="16" 
+              height="16" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            >
+              <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
+              <path d="M9 18h6" />
+              <path d="M10 22h4" />
+            </svg>
+            {showSuggestions && (
+              <span className="absolute top-0 right-0 block w-2 h-2 bg-green-500 rounded-full"></span>
+            )}
+          </Button>
+          
+          {/* AI Completion button - with keyboard/typing icon and loading state */}
+          <Button 
+            variant={isCompletionLoading ? "default" : "ghost"} 
+            size="sm" 
+            className={`h-8 w-8 p-0 relative ${isCompletionLoading ? 'text-primary-foreground bg-primary' : 'text-muted-foreground hover:text-foreground'}`}
+            title="AI Complete at Cursor"
+            onClick={requestCompletion}
+            disabled={isCompletionLoading}
+          >
+            {isCompletionLoading ? (
+              <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </svg>
+            ) : (
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <rect x="2" y="6" width="20" height="12" rx="2" />
+                <path d="M6 10h0" />
+                <path d="M10 10h0" />
+                <path d="M14 10h0" />
+                <path d="M18 10h0" />
+                <path d="M6 14h0" />
+                <path d="M18 14h0" />
+                <path d="M10 14h4" />
+              </svg>
+            )}
           </Button>
         </div>
 
@@ -388,90 +513,120 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         </Button>
       </div>
 
-      {/* Editor/Preview Area */}
-      <Card className="rounded-t-none border-t-0">
-        <CardContent className="p-0">
-          {previewMode ? (
-            <div className="prose dark:prose-invert max-w-none p-4">
-              <ReactMarkdown>{text}</ReactMarkdown>
-            </div>
-          ) : (
-            <div className="relative">
-              <Textarea
-                ref={textareaRef}
-                value={text}
-                onChange={handleChange}
-                onSelect={updateCursorPosition}
-                onClick={updateCursorPosition}
-                onKeyUp={updateCursorPosition}
-                placeholder={placeholder}
-                className="min-h-[60vh] font-mono text-sm resize-none bg-transparent border-none rounded-none focus-visible:ring-0 p-4"
-              />
-              {renderCursors()}
-              
-              {/* @ mention plugin */}
-              <AtMentionPlugin
-                text={text}
-                cursorPosition={cursorPosition}
-                onSelectDocument={handleDocumentReference}
-                editorRef={textareaRef}
-              />
-              
-              {/* AI Suggestion popup */}
-              {aiSuggestion && (
-                <div className="absolute rounded-md bg-muted/80 p-2 border max-w-md">
-                  <p className="text-sm mb-1">{aiSuggestion}</p>
-                  <div className="flex justify-end gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setAiSuggestion(null)}>
-                      Dismiss
-                    </Button>
-                    <Button size="sm" onClick={applyAiSuggestion}>
-                      Accept
-                    </Button>
+      {/* Main Content Area with Flex Layout */}
+      <div className="flex flex-1 rounded-t-none border-t-0">
+        {/* Left side: Editor/Preview */}
+        <Card className={`rounded-t-none border-t-0 ${(showSuggestions || showAIChat) ? 'w-2/3' : 'w-full'}`}>
+          <CardContent className="p-0">
+            {previewMode ? (
+              <div className="h-[75vh] overflow-y-auto prose dark:prose-invert max-w-none p-4">
+                <ReactMarkdown>{text}</ReactMarkdown>
+              </div>
+            ) : (
+              <div className="relative">
+                <Textarea
+                  ref={textareaRef}
+                  value={text}
+                  onChange={handleChange}
+                  onKeyDown={handleKeyDown}
+                  onSelect={updateCursorPosition}
+                  onClick={updateCursorPosition}
+                  onKeyUp={updateCursorPosition}
+                  placeholder={placeholder}
+                  className="h-[75vh] font-mono text-sm resize-none bg-transparent border-none rounded-none focus-visible:ring-0 p-4"
+                />
+                {renderCursors()}
+                
+                {/* @ mention plugin */}
+                <AtMentionPlugin
+                  text={text}
+                  cursorPosition={cursorPosition}
+                  onSelectDocument={handleDocumentReference}
+                  editorRef={textareaRef}
+                />
+                
+                {/* AI Suggestion inline display */}
+                {aiSuggestion && (
+                  <div className="absolute rounded-md border bg-background/95 shadow-lg right-6 top-1/3 transform -translate-y-1/2 w-64 overflow-hidden">
+                    <div className="p-3 bg-primary/10 border-b flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-5 0v-15A2.5 2.5 0 0 1 9.5 2Z"/>
+                          <path d="M19.5 13.5A2.5 2.5 0 0 1 22 16v3a2.5 2.5 0 0 1-5 0v-3a2.5 2.5 0 0 1 2.5-2.5Z"/>
+                          <path d="M5 13.5A2.5 2.5 0 0 0 2 16v3a2.5 2.5 0 0 0 5 0v-3a2.5 2.5 0 0 0-2.5-2.5Z"/>
+                          <path d="M12 4.5a2.5 2.5 0 0 1 5 0v15a2.5 2.5 0 0 1-5 0z"/>
+                        </svg>
+                        <span className="text-xs font-semibold">AI Completion</span>
+                      </div>
+                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setAiSuggestion(null)}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </Button>
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-mono italic opacity-80 mb-3 line-clamp-4">{aiSuggestion}</p>
+                      <div className="flex justify-between items-center">
+                        <div className="text-xs text-muted-foreground">Type <kbd className="px-1 py-0.5 bg-muted rounded">Tab</kbd> to accept</div>
+                        <Button size="sm" variant="default" className="h-7" onClick={applyAiSuggestion}>
+                          Apply
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+            )}
+          </CardContent>
+          
+          {/* Footer */}
+          <div className="flex justify-between items-center p-2 text-xs text-muted-foreground border-t">
+            <div>
+              {wordCount} words · {charCount} characters
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Footer */}
-      <div className="flex justify-between items-center p-2 text-xs text-muted-foreground">
-        <div>
-          {wordCount} words · {charCount} characters
-        </div>
-        <div>
-          {previewMode ? 'Preview Mode' : 'Edit Mode'}
-        </div>
+            <div>
+              {previewMode ? 'Preview Mode' : 'Edit Mode'}
+            </div>
+          </div>
+        </Card>
+        
+        {/* Right side: AI Features */}
+        {(showSuggestions || showAIChat) && (
+          <div className="w-1/3 ml-4 flex flex-col">
+            {/* Text suggestions - fixed height with scrolling */}
+            {showSuggestions && settings.features.suggestions && !previewMode && (
+              <div className="h-[75vh] overflow-auto mb-4">
+                <TextSuggestions 
+                  text={text}
+                  onApplySuggestion={(original, replacement) => {
+                    const newText = text.replace(original, replacement);
+                    setText(newText);
+                    onChange(newText);
+                  }}
+                  analysisOptions={{
+                    grammar: true,
+                    style: true,
+                    readability: true,
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* AI chat panel - fixed height to match editor */}
+            {showAIChat && (
+              <div className="h-[calc(75vh+2.5rem)]">
+                <AIChatPanel
+                  document={{title: document?.title || 'Current Document', text: text, createdAt: Date.now(), updatedAt: Date.now(), comments: []}}
+                  documentId={docId}
+                  isOpen={showAIChat}
+                  onClose={() => setShowAIChat(false)}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      
-      {/* Text suggestions */}
-      {showSuggestions && settings.features.suggestions && !previewMode && (
-        <TextSuggestions 
-          text={text}
-          onApplySuggestion={(original, replacement) => {
-            const newText = text.replace(original, replacement);
-            setText(newText);
-            onChange(newText);
-          }}
-          analysisOptions={{
-            grammar: true,
-            style: true,
-            readability: true,
-          }}
-        />
-      )}
-      
-      {/* AI chat panel */}
-      {showAIChat && (
-        <AIChatPanel
-          document={{title: 'Current Document', text: text, createdAt: Date.now(), updatedAt: Date.now(), comments: []}}
-          documentId={docId}
-          isOpen={showAIChat}
-          onClose={() => setShowAIChat(false)}
-        />
-      )}
     </div>
   );
 };

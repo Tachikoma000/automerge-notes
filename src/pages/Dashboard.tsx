@@ -155,16 +155,16 @@ export default function Dashboard() {
     return (
       <div className="container max-w-7xl mx-auto py-6 px-4">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Welcome to MarkFlow</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome to Arcane Studio</h1>
         </div>
         
         <Card className="text-center p-8">
           <CardHeader>
-            <CardTitle className="text-2xl">Get Started with MarkFlow</CardTitle>
+            <CardTitle className="text-2xl">Get Started with Arcane Studio</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <p className="text-lg text-muted-foreground">
-              It looks like this is your first time using MarkFlow. You can create your own documents and folders or set up some demo content to get started.
+              It looks like this is your first time using Arcane Studio. You can create your own documents and folders or set up some demo content to get started.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

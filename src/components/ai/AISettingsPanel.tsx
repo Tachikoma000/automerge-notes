@@ -69,7 +69,7 @@ const AISettingsPanel: React.FC<AISettingsPanelProps> = ({ isOpen, onClose }) =>
       <CardContent className="space-y-4">
         {/* API Key */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">
+          <label className="text-sm font-medium dark:text-white">
             Claude API Key
           </label>
           <Input
@@ -77,19 +77,20 @@ const AISettingsPanel: React.FC<AISettingsPanelProps> = ({ isOpen, onClose }) =>
             value={settings.apiKey}
             onChange={(e) => handleChange('apiKey', e.target.value)}
             placeholder="Enter your Claude API key"
+            className="dark:bg-gray-800 dark:border-gray-700 dark:text-white"
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground dark:text-gray-300">
             Your API key is stored locally and never sent to our servers.
           </p>
         </div>
         
         {/* Model Selection */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">
+          <label className="text-sm font-medium dark:text-white">
             Claude Model
           </label>
           <select
-            className="w-full p-2 rounded-md border"
+            className="w-full p-2 rounded-md border dark:bg-gray-800 dark:text-white dark:border-gray-700"
             value={settings.model}
             onChange={(e) => handleChange('model', e.target.value)}
           >
@@ -101,7 +102,7 @@ const AISettingsPanel: React.FC<AISettingsPanelProps> = ({ isOpen, onClose }) =>
         
         {/* Temperature */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">
+          <label className="text-sm font-medium dark:text-white">
             Temperature (Creativity): {settings.temperature}
           </label>
           <input
@@ -111,9 +112,9 @@ const AISettingsPanel: React.FC<AISettingsPanelProps> = ({ isOpen, onClose }) =>
             step="0.1"
             value={settings.temperature}
             onChange={(e) => handleChange('temperature', parseFloat(e.target.value))}
-            className="w-full"
+            className="w-full accent-primary"
           />
-          <div className="flex justify-between text-xs text-muted-foreground">
+          <div className="flex justify-between text-xs text-muted-foreground dark:text-gray-300">
             <span>Precise</span>
             <span>Creative</span>
           </div>
@@ -121,7 +122,7 @@ const AISettingsPanel: React.FC<AISettingsPanelProps> = ({ isOpen, onClose }) =>
         
         {/* Features */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">
+          <label className="text-sm font-medium dark:text-white">
             AI Features
           </label>
           
@@ -136,9 +137,9 @@ const AISettingsPanel: React.FC<AISettingsPanelProps> = ({ isOpen, onClose }) =>
                     feature as keyof AISettings['features'], 
                     e.target.checked
                   )}
-                  className="mr-2"
+                  className="mr-2 w-4 h-4 accent-primary"
                 />
-                <label htmlFor={feature} className="text-sm">
+                <label htmlFor={feature} className="text-sm dark:text-white">
                   {feature.charAt(0).toUpperCase() + feature.slice(1)}
                 </label>
               </div>
@@ -147,8 +148,8 @@ const AISettingsPanel: React.FC<AISettingsPanelProps> = ({ isOpen, onClose }) =>
         </div>
         
         {/* Indexing */}
-        <div className="space-y-2 border-t pt-4">
-          <label className="text-sm font-medium">
+        <div className="space-y-2 border-t pt-4 dark:border-gray-700">
+          <label className="text-sm font-medium dark:text-white">
             Document Indexing
           </label>
           
@@ -158,16 +159,16 @@ const AISettingsPanel: React.FC<AISettingsPanelProps> = ({ isOpen, onClose }) =>
               id="indexing-enabled"
               checked={settings.indexing.enabled}
               onChange={(e) => handleIndexingChange('enabled', e.target.checked)}
-              className="mr-2"
+              className="mr-2 w-4 h-4 accent-primary"
             />
-            <label htmlFor="indexing-enabled" className="text-sm">
+            <label htmlFor="indexing-enabled" className="text-sm dark:text-white">
               Enable document indexing for AI context
             </label>
           </div>
           
           <div className="pl-6 space-y-2">
             <select
-              className="w-full p-2 rounded-md border"
+              className="w-full p-2 rounded-md border dark:bg-gray-800 dark:text-white dark:border-gray-700"
               value={settings.indexing.frequency}
               onChange={(e) => handleIndexingChange('frequency', e.target.value as any)}
               disabled={!settings.indexing.enabled}
@@ -189,7 +190,7 @@ const AISettingsPanel: React.FC<AISettingsPanelProps> = ({ isOpen, onClose }) =>
             </Button>
             
             {indexingState.lastIndexed && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground dark:text-gray-300">
                 Last indexed: {indexingState.lastIndexed.toLocaleString()}
               </p>
             )}

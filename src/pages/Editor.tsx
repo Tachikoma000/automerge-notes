@@ -168,9 +168,9 @@ function CollaborativeEditor({ docUrl, userId }: { docUrl: string; userId: strin
   // Update document title (in title bar)
   useEffect(() => {
     if (document?.title) {
-      window.document.title = `${document.title} - MarkFlow`;
+      window.document.title = `${document.title} - Arcane Studio`;
     } else {
-      window.document.title = "MarkFlow";
+      window.document.title = "Arcane Studio";
     }
   }, [document?.title]);
 

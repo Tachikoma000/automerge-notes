@@ -12,6 +12,8 @@ function App() {
   const [docUrl, setDocUrl] = useState<string | null>(null)
   // State to hold a URL input for joining existing documents
   const [urlInput, setUrlInput] = useState('')
+  // Check if in demo mode
+  const [isDemoMode, setIsDemoMode] = useState(false)
   // Theme state
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     // Check for user preference in localStorage or system preference
@@ -29,6 +31,23 @@ function App() {
       localStorage.setItem('theme', 'light')
     }
   }, [darkMode])
+
+  // Check for demo mode when component mounts
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const demoParam = urlParams.get('demo')
+    setIsDemoMode(demoParam === 'true')
+  }, [])
+
+  // Function to exit demo mode
+  const exitDemoMode = () => {
+    // Create a new URL based on the current one
+    const url = new URL(window.location.href)
+    // Remove the demo parameter
+    url.searchParams.delete('demo')
+    // Reload the page with the new URL
+    window.location.href = url.toString()
+  }
 
   // Toggle theme function
   const toggleTheme = () => {
@@ -84,6 +103,29 @@ function App() {
   return (
     <div className="min-h-screen bg-background text-foreground py-8 px-4">
       <div className="container max-w-4xl mx-auto">
+        {isDemoMode && (
+          <div className="bg-yellow-100 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-800 rounded-md p-3 mb-6 text-sm flex items-center justify-between">
+            <div className="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-yellow-600 dark:text-yellow-400">
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <span className="font-medium text-yellow-800 dark:text-yellow-200">
+                You are currently in Demo Mode. Changes will not be saved permanently.
+              </span>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={exitDemoMode}
+              className="ml-4 bg-white dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700 hover:bg-yellow-50 dark:hover:bg-yellow-700"
+            >
+              Exit Demo Mode
+            </Button>
+          </div>
+        )}
+        
         <header className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Automerge Notes</h1>
           <Button 

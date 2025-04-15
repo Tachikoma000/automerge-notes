@@ -31,7 +31,7 @@ interface VectorDBSchema extends DBSchema {
 // Vector Store class
 export class VectorStore {
   private db: IDBPDatabase<VectorDBSchema> | null = null;
-  private dbName = 'markflow-vector-store';
+  private dbName = 'arcane-studio-vector-store';
   private dbVersion = 1;
   
   // Initialize database

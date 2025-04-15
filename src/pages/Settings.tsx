@@ -278,6 +278,58 @@ export default function Settings() {
           </CardContent>
         </Card>
 
+        {/* Advanced Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Advanced Settings</CardTitle>
+            <CardDescription>Reset application data and troubleshooting options</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium mb-3">Reset Application</h3>
+              <div className="text-sm text-muted-foreground mb-3">
+                <p>If you're having issues or stuck in demo mode, you can reset the application data. This will clear all locally stored documents and settings.</p>
+              </div>
+              <Button 
+                variant="destructive"
+                onClick={() => {
+                  if (window.confirm("Are you sure? This will delete all local documents and reset the application to its initial state.")) {
+                    // Clear all localStorage items
+                    localStorage.clear();
+                    // Reload the page to start fresh
+                    window.location.href = "/";
+                  }
+                }}
+              >
+                Reset Application Data
+              </Button>
+            </div>
+            <div className="mt-4 border-t pt-4">
+              <h3 className="text-sm font-medium mb-3">Exit Demo Mode</h3>
+              <div className="text-sm text-muted-foreground mb-3">
+                <p>If you're stuck in demo mode, this button will try to restore normal functionality.</p>
+              </div>
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  // Remove any possible demo mode indicators from localStorage
+                  localStorage.removeItem('demo-mode');
+                  localStorage.removeItem('automerge-notes-demo-mode');
+                  
+                  // Remove any URL parameters that might indicate demo mode
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete('demo');
+                  
+                  // Reload with the clean URL
+                  window.location.href = url.toString();
+                }}
+              >
+                Exit Demo Mode
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* About Section */}
         <Card>
           <CardHeader>
@@ -285,7 +337,7 @@ export default function Settings() {
           </CardHeader>
           <CardContent>
             <div className="text-sm text-muted-foreground">
-              <p>MarkFlow v1.0.0</p>
+              <p>Arcane Studio v1.0.0</p>
               <p className="mt-1">A modern, collaborative markdown editor with AI assistance.</p>
               <div className="mt-4">
                 <p>Built with:</p>
